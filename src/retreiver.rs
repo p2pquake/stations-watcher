@@ -1,10 +1,8 @@
-
-use serde::{Serialize, Deserialize, Deserializer};
 use serde::de;
+use serde::{Deserialize, Deserializer, Serialize};
 use std::fmt;
 
-#[derive(Serialize, Deserialize)]
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SeismicIntensityStation {
     lat: String,
     #[serde(deserialize_with = "deserialize_string_or_float")]
@@ -16,12 +14,20 @@ pub struct SeismicIntensityStation {
 
 impl SeismicIntensityStation {
     pub fn to_string(&self) -> String {
-        format!("{},{},{},{},{}", self.lat, self.lon, self.name, self.pref, self.affi)
+        format!(
+            "{},{},{},{},{}",
+            self.lat, self.lon, self.name, self.pref, self.affi
+        )
     }
 }
 
 pub async fn retreive_and_parse() -> Vec<SeismicIntensityStation> {
-    let body = reqwest::get("https://www.data.jma.go.jp/svd/eqev/data/intens-st/stations.json").await.unwrap().text().await.unwrap();
+    let body = reqwest::get("https://www.data.jma.go.jp/svd/eqev/data/intens-st/stations.json")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
 
     let items: Vec<SeismicIntensityStation> = serde_json::from_str(&body).unwrap();
     items
