@@ -3,14 +3,17 @@ extern crate serde_derive;
 extern crate serde_json;
 
 use crate::storage::Storage;
-use similar::{ChangeTag, TextDiff};
+use similar::TextDiff;
 
 mod retreiver;
 mod storage;
 
 #[tokio::main]
 async fn main() {
-    let old_stations = storage::FileStorage.load();
+    let s3_storage =
+        storage::S3Storage::new("p2pquake-seismic-intensity-stations".to_string()).await;
+
+    let old_stations = s3_storage.load().await;
     let stations = retreiver::retreive_and_parse().await;
 
     let old_stations_str = old_stations
@@ -29,10 +32,11 @@ async fn main() {
     let diff = TextDiff::from_lines(&old_stations_str, &stations_str);
 
     if diff.ratio() == 1.0 {
+        println!("no diff.");
         std::process::exit(0);
     }
 
-    storage::save(stations);
+    s3_storage.save(stations).await;
 
     println!("{}", diff.unified_diff().context_radius(1));
     std::process::exit(1);
