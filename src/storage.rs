@@ -12,7 +12,7 @@ use std::{fs, io::Write};
 #[async_trait]
 pub trait Storage {
     async fn load(&self) -> Vec<retreiver::SeismicIntensityStation>;
-    async fn save(&self, stations: Vec<retreiver::SeismicIntensityStation>);
+    async fn save(&self, stations: &Vec<retreiver::SeismicIntensityStation>);
 }
 
 pub struct FileStorage;
@@ -25,7 +25,7 @@ impl Storage for FileStorage {
         stations
     }
 
-    async fn save(&self, stations: Vec<super::retreiver::SeismicIntensityStation>) {
+    async fn save(&self, stations: &Vec<super::retreiver::SeismicIntensityStation>) {
         let stations_str = serde_json::to_string(&stations).unwrap();
 
         let mut file = fs::File::create("stations.json").unwrap();
@@ -36,6 +36,7 @@ impl Storage for FileStorage {
 pub struct S3Storage {
     bucket: String,
     key: String,
+    csv_key: String,
     client: Client,
 }
 
@@ -48,8 +49,21 @@ impl S3Storage {
         Self {
             bucket: bucket,
             key: "stations.json".to_string(),
+            csv_key: "Stations.csv".to_string(),
             client: client,
         }
+    }
+
+    pub async fn save_csv(&self, csv: String) {
+        let bytestream = ByteStream::from(csv.as_bytes().to_vec());
+        self.client
+            .put_object()
+            .bucket(self.bucket.to_string())
+            .key(self.csv_key.to_string())
+            .body(bytestream)
+            .send()
+            .await
+            .unwrap();
     }
 }
 
@@ -75,12 +89,11 @@ impl Storage for S3Storage {
         serde_json::from_str(text.as_ref()).unwrap()
     }
 
-    async fn save(&self, stations: Vec<retreiver::SeismicIntensityStation>) {
+    async fn save(&self, stations: &Vec<retreiver::SeismicIntensityStation>) {
         let stations_str = serde_json::to_string(&stations).unwrap();
         let bytestream = ByteStream::from(stations_str.as_bytes().to_vec());
 
-        let resp = self
-            .client
+        self.client
             .put_object()
             .bucket(self.bucket.to_string())
             .key(self.key.to_string())

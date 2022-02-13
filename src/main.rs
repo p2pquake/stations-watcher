@@ -36,8 +36,26 @@ async fn main() {
         std::process::exit(0);
     }
 
-    s3_storage.save(stations).await;
+    // 変更があった場合
+    s3_storage.save(&stations).await;
 
     println!("{}", diff.unified_diff().context_radius(1));
+
+    let csv = stations
+        .iter()
+        .map(|station| {
+            format!(
+                "{},{},{},{},{}",
+                station.pref_name(),
+                station.name,
+                station.lat,
+                station.lon,
+                station.affi_name()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\r\n");
+    s3_storage.save_csv(csv).await;
+
     std::process::exit(1);
 }
