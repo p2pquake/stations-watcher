@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use aws_config::meta::region::RegionProviderChain;
-use aws_sdk_s3::{ByteStream, Client};
-
-use crate::retreiver::retreive_and_parse;
+use aws_sdk_s3::{
+    error::{GetObjectError, GetObjectErrorKind},
+    ByteStream, Client, SdkError,
+};
 
 use super::retreiver;
 use std::{fs, io::Write};
@@ -78,15 +79,27 @@ impl Storage for S3Storage {
             .send()
             .await;
 
-        if resp.is_err() {
-            // FIXME: エラー処理 (ファイルが存在しない場合の処理は必要)
-            return vec![];
-        }
+        match resp {
+            Ok(_) => {
+                let bytes = resp.unwrap().body.collect().await.unwrap().into_bytes();
+                let text = String::from_utf8_lossy(bytes.as_ref());
 
-        let bytes = resp.unwrap().body.collect().await.unwrap().into_bytes();
-        let text = String::from_utf8_lossy(bytes.as_ref());
+                return serde_json::from_str(text.as_ref()).unwrap();
+            }
+            Err(SdkError::ServiceError {
+                err:
+                    GetObjectError {
+                        kind: GetObjectErrorKind::NoSuchKey(_),
+                        ..
+                    },
+                ..
+            }) => {
+                return vec![];
+            }
+            _ => {}
+        };
 
-        serde_json::from_str(text.as_ref()).unwrap()
+        panic!();
     }
 
     async fn save(&self, stations: &Vec<retreiver::SeismicIntensityStation>) {
