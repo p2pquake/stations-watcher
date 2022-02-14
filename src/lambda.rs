@@ -1,6 +1,7 @@
 use lambda_runtime::{handler_fn, Context, Error};
 use serde_json::{json, Value};
 
+mod github;
 mod retreiver;
 mod storage;
 mod update;

@@ -1,5 +1,8 @@
+use std::env;
+
 use similar::TextDiff;
 
+use crate::github;
 use crate::retreiver;
 use crate::storage;
 use crate::storage::Storage;
@@ -51,6 +54,16 @@ pub async fn update() -> bool {
         .collect::<Vec<_>>()
         .join("\r\n");
     s3_storage.save_csv(csv).await;
+
+    github::create_issue(
+        env::var("org").unwrap(),
+        env::var("repo").unwrap(),
+        env::var("app_id").unwrap(),
+        env::var("pem_bucket").unwrap(),
+        env::var("pem_key").unwrap(),
+        env::var("installation_id").unwrap(),
+    )
+    .await;
 
     true
 }

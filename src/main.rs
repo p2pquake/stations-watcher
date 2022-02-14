@@ -1,6 +1,7 @@
 mod retreiver;
 mod storage;
 mod update;
+mod github;
 
 #[tokio::main]
 async fn main() {
