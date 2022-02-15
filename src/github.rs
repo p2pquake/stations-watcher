@@ -16,13 +16,13 @@ pub async fn create_issue(
     pem_bucket: String,
     pem_key: String,
     installation_id: String,
+    diff: String,
+    presigned_url: String,
 ) {
     let mut map = HashMap::new();
     map.insert("title", "Update seismic intensity stations");
-    map.insert(
-        "body",
-        "The list of seismic intensity stations has been updated.\n\nSee: https://www.data.jma.go.jp/svd/eqev/data/intens-st/stations.json\n\nCreated by stations_watcher (https://github.com/p2pquake/stations_watcher)",
-    );
+    let body = format!("The list of seismic intensity stations has been updated.\nSee: https://www.data.jma.go.jp/svd/eqev/data/intens-st/stations.json\nCSV: [Stations.csv]({}) (valid for 7 days)\n\n```diff\n{}\n```\n\nCreated by stations_watcher (https://github.com/p2pquake/stations_watcher)", presigned_url, diff);
+    map.insert("body", &body);
 
     let pem = get_app_pem_from_s3(pem_bucket, pem_key).await;
     let jwt = generate_github_app_jwt(pem, app_id).await;

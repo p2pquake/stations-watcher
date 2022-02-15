@@ -62,6 +62,8 @@ pub async fn update() -> bool {
         env::var("pem_bucket").unwrap(),
         env::var("pem_key").unwrap(),
         env::var("installation_id").unwrap(),
+        format!("{}", diff.unified_diff().context_radius(1)),
+        s3_storage.generate_csv_presigned_url().await,
     )
     .await;
 

@@ -2,11 +2,12 @@ use async_trait::async_trait;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_s3::{
     error::{GetObjectError, GetObjectErrorKind},
+    presigning::config::PresigningConfig,
     ByteStream, Client, SdkError,
 };
 
 use super::retreiver;
-use std::{fs, io::Write};
+use std::{fs, io::Write, time::Duration};
 
 // Strategy パターンっぽくしたかったが思ったようにはなっていない。
 // （ Rust にデザインパターンをそのまま当てようとするのが間違っている感）
@@ -53,6 +54,21 @@ impl S3Storage {
             csv_key: "Stations.csv".to_string(),
             client: client,
         }
+    }
+
+    pub async fn generate_csv_presigned_url(&self) -> String {
+        let presigning_config =
+            PresigningConfig::expires_in(Duration::from_secs(24 * 60 * 60 * 7)).unwrap();
+        let resp = self
+            .client
+            .get_object()
+            .bucket(self.bucket.to_string())
+            .key(self.csv_key.to_string())
+            .presigned(presigning_config)
+            .await
+            .unwrap();
+
+        resp.uri().to_string()
     }
 
     pub async fn save_csv(&self, csv: String) {
